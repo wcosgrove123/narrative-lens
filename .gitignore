@@ -35,3 +35,6 @@ Thumbs.db
 
 # Test photos (if any)
 photos/
+
+# Claude Code settings
+.claude/
