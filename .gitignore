@@ -38,3 +38,17 @@ photos/
 
 # Claude Code settings
 .claude/
+# --- added 2026-09-17 by homelab safety-net pass ---
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.key
+*.pem
+client_secret*.json
+credentials*.json
+.venv/
+.venv-*/
+venv/
+__pycache__/
+*.pyc

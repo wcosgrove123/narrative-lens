@@ -19,7 +19,16 @@ export async function convertHeicToJpeg(file: File): Promise<File> {
       type: 'image/jpeg',
       lastModified: Date.now(),
     });
-  } catch (error) {
+  } catch (error: any) {
+    // If the image is already browser-readable (code: 1), just use it as-is
+    // This happens when Mac exports HEIC as JPEG but keeps the .HEIC extension
+    if (error.code === 1) {
+      return new File([file], file.name.replace(/\.heic$/i, '.jpg'), {
+        type: 'image/jpeg',
+        lastModified: file.lastModified,
+      });
+    }
+
     console.error('Error converting HEIC:', error);
     throw new Error('Failed to convert HEIC image');
   }

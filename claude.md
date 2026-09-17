@@ -16,14 +16,30 @@ Visual Narrative is a desktop/web application for photographers to create sequen
 4. **Single User Focus** - V1 is local-first, no multi-user or accounts
 
 ## Project Status
-**Current Phase:** MVP Development - In Progress
+**Current Phase:** V1.1 Development - Photo Editing "Adding the Soul"
+
+### V1.0 (MVP) - Complete! 🎉
 - ✅ Project scaffolding complete (Vite + React + TypeScript)
 - ✅ Core UI components built (Library, Editor, Dialog)
 - ✅ IndexedDB storage layer implemented
 - ✅ Story creation and management working
-- ✅ Photo import functionality complete
-- 🔄 Drag-and-drop sequencing (in progress)
-- ⏳ Delete story functionality (pending)
+- ✅ Photo import functionality complete (with HEIC support)
+- ✅ Drag-and-drop sequencing canvas implemented
+- ✅ Reorder photos within canvas
+- ✅ Delete story functionality
+- ✅ Set cover image per story
+- ✅ Optimized Blob storage for performance
+
+### V1.1 (In Progress) - Photo Editing
+- ✅ Custom image filter utilities (Canvas API-based)
+- ✅ PhotoEditor component with live preview
+- ✅ Adjustment sliders (Brightness, Contrast, Saturation, Blur)
+- ✅ Filter presets (Cinematic, Vibrant, B&W, Vintage, Gritty)
+- ✅ Test page for editor (`/test-editor` route)
+- ⏳ Integration with story editor
+- ⏳ Save/load filter settings per photo
+- ⏳ Caption text fields per photo
+- ⏳ Main title/intro text block
 
 ## MVP Feature Set (Version 1.0 - Q4 2025)
 **Theme:** "Get it working, not perfect"
@@ -32,16 +48,18 @@ Visual Narrative is a desktop/web application for photographers to create sequen
 1. **Story Library/Dashboard**
    - ✅ Create new named stories (with dialog modal)
    - ✅ Display stories as thumbnail grid with cover images
-   - ⏳ Delete stories (pending)
-   - ⏳ Set cover image per story (pending)
+   - ✅ Delete stories (with confirmation dialog)
+   - ✅ Set cover image per story (auto-displays on cards)
    - ✅ Welcome screen for first-time users
    - ✅ Navigation to editor
 
 2. **Story Editor** (Two-column layout)
-   - ✅ Import multiple photos from local computer (file picker)
-   - ✅ Photo bin displaying imported images
-   - ⏳ Drag-and-drop sequencing canvas (pending)
-   - ⏳ Reorder photos in sequence (pending)
+   - ✅ Import multiple photos from local computer (file picker + drag-drop)
+   - ✅ Photo bin displaying imported images (thumbnails)
+   - ✅ Drag-and-drop sequencing canvas (with @dnd-kit)
+   - ✅ Reorder photos in sequence (drag handles on canvas photos)
+   - ✅ Remove photos from canvas (back to bin)
+   - ✅ Set cover image button on canvas photos
    - ✅ Editable story title in header
    - ✅ Publish toggle (UI only, functionality in v1.2)
 
@@ -49,7 +67,10 @@ Visual Narrative is a desktop/web application for photographers to create sequen
    - ✅ Save stories and sequences to IndexedDB
    - ✅ Load stories on app startup
    - ✅ Auto-save story title changes
-   - ✅ Photos stored as base64 data URLs
+   - ✅ Optimistic updates for drag operations
+   - ✅ Photos stored as Blobs (with backward-compatible base64 support)
+   - ✅ Automatic image compression (2048px max, 1MB limit)
+   - ✅ Thumbnail generation (400px for grid display)
 
 ### Explicitly OUT OF SCOPE for V1.0:
 - Photo editing/tone adjustments (comes in v1.1)
@@ -111,11 +132,18 @@ The PRD mentions "desktop and web application" - need to decide on:
 ### Image Handling
 - **Supported formats**: JPEG, PNG, GIF, WebP, BMP, SVG, HEIC/HEIF
 - **HEIC/HEIF**: Auto-converts to JPEG using heic2any
+  - Handles Mac's exported HEIC files (often already JPEG with .HEIC extension)
+  - Silent fallback for browser-readable files
 - **RAW formats**: NOT supported (.cr2, .nef, .arw, etc.)
   - Users must export RAW to JPEG in Lightroom/CaptureOne first
   - Too large and complex for browser processing
-- **Storage**: Base64 data URLs in IndexedDB
-- **Future optimization**: Thumbnail generation, compression
+- **Storage**: Blobs in IndexedDB (Object URLs for rendering)
+  - Legacy base64 support for backward compatibility
+  - ~33% smaller than base64 encoding
+- **Compression**: Automatic via browser-image-compression
+  - Full: 2048px max, 1MB limit
+  - Thumbnails: 400px for grid display, 100KB limit
+  - Web workers for background processing
 
 ### Data Model (Conceptual)
 ```
@@ -158,7 +186,7 @@ Alex (target user) can:
 - Return later and continue editing
 
 ### Technical Stack (Decided)
-- [x] Frontend framework: **React 18 + TypeScript**
+- [x] Frontend framework: **React 19 + TypeScript**
 - [x] Desktop vs web-first: **Web app** (can wrap in Electron later)
 - [x] Build tool: **Vite**
 - [x] Styling: **Tailwind CSS**
@@ -168,7 +196,7 @@ Alex (target user) can:
 - [x] State management: **Zustand**
 - [x] UI components: **Radix UI** (headless, accessible)
 - [x] Icons: **lucide-react**
-- [x] Image editing (v1.1): **Ente Photo Editor SDK**
+- [x] Image editing (v1.1): **Custom Canvas API solution** (Ente SDK not compatible with React 19)
 
 ## Important Constraints
 - **No premature optimization** - Get v1.0 working first
@@ -198,11 +226,17 @@ narrative-lens-app/
 ```
 
 ### Key Implementation Decisions
-1. **Storage**: Photos stored as base64 data URLs in IndexedDB (no file system access needed)
+1. **Storage**: Photos stored as Blobs in IndexedDB (with Object URLs for rendering)
+   - Backward-compatible with base64 for legacy data
+   - Optimistic updates for drag operations (instant UI, background saves)
 2. **State Management**: Zustand stores with async operations for database interactions
 3. **Routing**: React Router with `/` for library and `/editor/:storyId` for editor
 4. **Styling**: Tailwind utilities + inline styles for brand colors (due to v4 compatibility)
-5. **File Upload**: Hidden input + ref pattern for native file picker experience
+5. **File Upload**: Hidden input + ref pattern + drag-drop for native file picker experience
+6. **Drag-and-Drop**: @dnd-kit with droppable canvas and sortable contexts
+   - Photo bin (thumbnails) → Canvas (full story sequence)
+   - Reorder within canvas with drag handles
+   - Visual feedback with drag overlay
 
 ### Database Schema (Dexie)
 ```typescript

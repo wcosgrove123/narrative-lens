@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db';
 import type { Photo } from '../types';
 import { convertHeicToJpeg, isHeicFile, isSupportedImageFile, isRawFile } from '../utils/imageUtils';
+import imageCompression from 'browser-image-compression';
 
 interface PhotoStore {
   photos: Photo[];
@@ -35,7 +36,6 @@ export const usePhotoStore = create<PhotoStore>((set, get) => ({
     // Convert HEIC to JPEG if needed
     let processedFile = file;
     if (isHeicFile(file)) {
-      console.log('Converting HEIC to JPEG:', file.name);
       try {
         processedFile = await convertHeicToJpeg(file);
       } catch (error) {
@@ -44,23 +44,27 @@ export const usePhotoStore = create<PhotoStore>((set, get) => ({
       }
     }
 
-    const photos = get().photos.filter((p) => p.storyId === storyId);
-    const maxSequence = photos.length > 0 ? Math.max(...photos.map((p) => p.sequence)) : -1;
+    // Compress full-size image (max 2048px width, ~90% quality)
+    const fullBlob = await imageCompression(processedFile, {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 2048,
+      useWebWorker: true,
+    });
 
-    // Convert file to base64 data URL
-    const dataUrl = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.readAsDataURL(processedFile);
+    // Create thumbnail (max 400px for grid display)
+    const thumbnailBlob = await imageCompression(processedFile, {
+      maxSizeMB: 0.1,
+      maxWidthOrHeight: 400,
+      useWebWorker: true,
     });
 
     const newPhoto: Photo = {
       id: uuidv4(),
       storyId,
       originalPath: file.name, // Keep original filename
-      fullDataUrl: dataUrl,
-      thumbnailDataUrl: dataUrl, // For now, use same image. Can optimize later.
-      sequence: maxSequence + 1,
+      fullBlob,
+      thumbnailBlob,
+      sequence: -1, // Start in bin (not on canvas)
       createdAt: new Date(),
     };
 
@@ -78,16 +82,22 @@ export const usePhotoStore = create<PhotoStore>((set, get) => ({
   },
 
   updatePhotoSequence: async (photos: Photo[]) => {
-    // Update sequence numbers for all photos
-    await Promise.all(
-      photos.map((photo, index) =>
-        db.photos.update(photo.id, { sequence: index })
-      )
+    // Update local state immediately (optimistic update)
+    const currentPhotos = get().photos;
+    const updatedPhotosMap = new Map(photos.map(p => [p.id, p]));
+
+    const newPhotos = currentPhotos.map(photo =>
+      updatedPhotosMap.has(photo.id) ? updatedPhotosMap.get(photo.id)! : photo
     );
 
-    if (photos.length > 0) {
-      await get().loadPhotosForStory(photos[0].storyId);
-    }
+    set({ photos: newPhotos.sort((a, b) => a.sequence - b.sequence) });
+
+    // Update database in background (don't await)
+    Promise.all(
+      photos.map((photo) =>
+        db.photos.update(photo.id, { sequence: photo.sequence })
+      )
+    ).catch(err => console.error('Failed to update photo sequence:', err));
   },
 
   getPhotosForStory: (storyId: string) => {

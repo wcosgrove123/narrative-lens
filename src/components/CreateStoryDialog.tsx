@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
+import { Button, IconButton } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface CreateStoryDialogProps {
   open: boolean;
@@ -32,44 +34,48 @@ export default function CreateStoryDialog({ open, onOpenChange, onCreateStory }:
             <Dialog.Title className="text-2xl font-bold text-white">
               Create New Story
             </Dialog.Title>
-            <Dialog.Close className="text-gray-400 hover:text-white transition-colors">
-              <X size={24} />
+            <Dialog.Close asChild>
+              <IconButton
+                icon={<X size={20} />}
+                variant="ghost"
+                size="sm"
+                aria-label="Close dialog"
+              />
             </Dialog.Close>
           </div>
 
+          <Dialog.Description className="text-gray-400 text-sm mb-6">
+            Give your photo story a memorable title to get started.
+          </Dialog.Description>
+
           <form onSubmit={handleSubmit}>
             <div className="mb-6">
-              <label htmlFor="story-title" className="block text-sm font-medium text-gray-300 mb-2">
-                Story Title
-              </label>
-              <input
+              <Input
                 id="story-title"
+                label="Story Title"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., Championship Game 2024"
-                className="w-full px-4 py-3 rounded-lg bg-gray-800 text-white border-2 border-gray-700 focus:border-blue-500 outline-none transition-colors placeholder-gray-500"
                 autoFocus
               />
             </div>
 
             <div className="flex gap-3 justify-end">
               <Dialog.Close asChild>
-                <button
+                <Button
                   type="button"
-                  className="px-6 py-2.5 rounded-lg text-gray-300 hover:bg-gray-700 transition-colors font-medium"
+                  variant="ghost"
                 >
                   Cancel
-                </button>
+                </Button>
               </Dialog.Close>
-              <button
+              <Button
                 type="submit"
                 disabled={!title.trim()}
-                className="px-6 py-2.5 rounded-lg text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600"
-                style={{ backgroundColor: title.trim() ? '#007AFF' : '#666' }}
               >
                 Create Story
-              </button>
+              </Button>
             </div>
           </form>
         </Dialog.Content>

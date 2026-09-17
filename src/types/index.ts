@@ -4,8 +4,15 @@ export interface Photo {
   id: string;
   storyId: string;
   originalPath: string; // For local file reference
-  thumbnailDataUrl?: string; // Base64 thumbnail for quick display
-  fullDataUrl?: string; // Base64 full image
+
+  // New Blob storage (preferred)
+  thumbnailBlob?: Blob;
+  fullBlob?: Blob;
+
+  // Legacy base64 storage (backward compatibility)
+  thumbnailDataUrl?: string;
+  fullDataUrl?: string;
+
   sequence: number; // Order in the story
   createdAt: Date;
 
